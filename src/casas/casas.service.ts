@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { db } from '../db/connection';
 import { casas, NuevaCasa } from '../db/schema_casas';
-import { eq } from 'drizzle-orm';
+import { eq , sql} from 'drizzle-orm';
 import { UpdateCasa } from '../db/schema_casas';
 
 export interface Casa {
@@ -20,6 +20,49 @@ export class CasasService {
     return await db.select().from(casas);
   }
 
+  //LISTAR POR ID
+  async obtenerCasaPorId(id: number) {
+    const casa = await db.select().from(casas).where(eq(casas.id, id)).limit(1);
+
+    if (!casa.length) {
+      throw new NotFoundException('Casa no encontrada');
+    }
+
+    return casa[0];
+  }
+
+  // BUSCAR CASAS
+//   async buscarCasas(texto: string, page = 1, limit = 10) {
+//     const offset = (page - 1) * limit;
+  
+//     if (texto.length < 3) {
+//         throw new BadRequestException('La búsqueda es muy corta');
+//       }
+      
+//     return await db.execute(sql`
+//       SELECT *
+//       FROM casas
+//       WHERE MATCH(nombre, descripcion, direccion)
+//       AGAINST (${texto} IN NATURAL LANGUAGE MODE)
+//       LIMIT ${limit} OFFSET ${offset}
+//     `);
+//   }
+async buscarCasas(q: string, page = 1) {
+    const limit = 10;
+    const offset = (page - 1) * limit;
+  
+    return await db
+      .select()
+      .from(casas)
+      .where(sql`
+        MATCH(${casas.nombre}, ${casas.descripcion}, ${casas.direccion})
+        AGAINST (${q} IN NATURAL LANGUAGE MODE)
+      `)
+      .limit(limit)
+      .offset(offset);
+  }
+  
+
   // CREAR CASA
   async crearCasa(data: NuevaCasa) {
     await db.insert(casas).values(data);
@@ -33,14 +76,13 @@ export class CasasService {
       .set(data)
       .where(eq(casas.id, id))
       .execute();
-  
+
     if (result[0].affectedRows === 0) {
-      throw new NotFoundException("Casa no encontrada");
+      throw new NotFoundException('Casa no encontrada');
     }
-  
-    return { message: "Casa actualizada correctamente" };
+
+    return { message: 'Casa actualizada correctamente' };
   }
-  
 
   //ELIMINAR CASA
   async eliminarCasa(id: number) {
@@ -53,16 +95,3 @@ export class CasasService {
     return { message: 'Casa eliminada correctamente' };
   }
 }
-
-//   async crearCasa(data: {
-//     nombre: string;
-//     descripcion: string;
-//     direccion: string;
-//     precio: number;
-//     estado: string;
-//   })
-//   {
-//     await db.insert(casas).values(data);
-//     return { message: 'Casa creada correctamente' };
-//   }
-//}
