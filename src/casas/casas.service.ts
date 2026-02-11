@@ -4,14 +4,27 @@ import { casas, NuevaCasa } from '../db/schema_casas';
 import { eq , sql} from 'drizzle-orm';
 import { UpdateCasa } from '../db/schema_casas';
 
+// export interface Casa {
+//   id: number;
+//   nombre: string;
+//   descripcion: string;
+//   direccion: string;
+//   precio: number;
+//   estado: string;
+// }
 export interface Casa {
   id: number;
+  host_id: number;
   nombre: string;
   descripcion: string;
   direccion: string;
-  precio: number;
+  precio: string;           // 🔹 cambiar de number a string
   estado: string;
+  created_at?: Date;        // si Drizzle usa Date
+  updated_at?: Date;
 }
+
+
 
 @Injectable()
 // LISTAR CASAS
@@ -31,22 +44,7 @@ export class CasasService {
     return casa[0];
   }
 
-  // BUSCAR CASAS
-//   async buscarCasas(texto: string, page = 1, limit = 10) {
-//     const offset = (page - 1) * limit;
-  
-//     if (texto.length < 3) {
-//         throw new BadRequestException('La búsqueda es muy corta');
-//       }
-      
-//     return await db.execute(sql`
-//       SELECT *
-//       FROM casas
-//       WHERE MATCH(nombre, descripcion, direccion)
-//       AGAINST (${texto} IN NATURAL LANGUAGE MODE)
-//       LIMIT ${limit} OFFSET ${offset}
-//     `);
-//   }
+
 async buscarCasas(q: string, page = 1) {
     const limit = 10;
     const offset = (page - 1) * limit;
