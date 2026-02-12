@@ -74,6 +74,10 @@ CREATE TABLE casas (
         ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+ALTER TABLE casas
+ADD FULLTEXT casas_search_idx (nombre, descripcion, direccion);
+
+
 -- TABLA PAGOS HOSTS (en caso de pagar directamente con cuenta bancaria)
 -- CREATE TABLE host_payment_accounts (
 --     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
