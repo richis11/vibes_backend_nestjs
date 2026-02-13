@@ -19,9 +19,11 @@ export interface Casa {
   descripcion: string;
   direccion: string;
   precio: string;           // 🔹 cambiar de number a string
+  disponibilidad: string;
   estado: string;
   created_at?: Date;        // si Drizzle usa Date
   updated_at?: Date;
+  deleted_at?: Date;
 }
 
 

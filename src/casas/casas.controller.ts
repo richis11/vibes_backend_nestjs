@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Put, Delete, Param, Query} from '@nestjs/common';
 import { CasasService, Casa } from './casas.service';
 import type { UpdateCasa } from "../db/schema_casas";
+import type{ NuevaCasa } from '../db/schema_casas';
 
 
 @Controller('casas')
@@ -33,10 +34,9 @@ export class CasasController {
 
   //POST /casas
   @Post()
-  crearCasa(@Body() body: Omit<Casa, 'id'>) {
-    return this.casasService.crearCasa(body);
-  }
-
+async crearCasa(@Body() body: NuevaCasa) {
+  return this.casasService.crearCasa(body);
+}
   //PUT /casas/(numero)
   @Put(":id")
   actualizarCasa(
