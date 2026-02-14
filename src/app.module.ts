@@ -8,10 +8,11 @@ import { AppController } from './app/app.controller';
 import { UsersModule } from './users/users.module';
 import { PersonasModule } from './personas/personas.module';
 import { HostsModule } from './hosts/hosts.module';
+import { ReservasModule } from './reservas/reservas.module';
 
 
 @Module({
-  imports: [CasasModule, UsersModule, PersonasModule, HostsModule],
+  imports: [CasasModule, UsersModule, PersonasModule, HostsModule, ReservasModule],
   controllers: [AppController],
 })
 

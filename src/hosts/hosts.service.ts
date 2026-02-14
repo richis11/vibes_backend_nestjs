@@ -91,9 +91,9 @@ export class HostsService {
     const result = await db.delete(hosts).where(eq(hosts.id, id)).execute();
 
     if (result[0].affectedRows === 0) {
-      throw new NotFoundException('Usuario no encontrado');
+      throw new NotFoundException('Host no encontrado');
     }
 
-    return { message: 'Usuario eliminado correctamente' };
+    return { message: 'Host eliminado correctamente' };
   }
 }
