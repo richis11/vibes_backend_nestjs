@@ -71,6 +71,24 @@ export class UsersService {
     return { message: 'Usuario actualizado correctamente' };
   }
 
+    // SOFT DELETE
+  // async eliminarUser(id: number) {
+  //   const result = await db
+  //     .update(users)
+  //     .set({
+  //       estado: 'eliminado',
+  //       deleted_at: new Date(),
+  //     })
+  //     .where(eq(users.id, id))
+  //     .execute();
+
+  //   if (result[0].affectedRows === 0) {
+  //     throw new NotFoundException('Usuario no encontrada');
+  //   }
+
+  //   return { message: 'Usuario eliminado correctamente' };
+  // }
+
   // ELIMINAR USER (delete físico por ahora)
   async eliminarUser(id: number) {
     const result = await db.delete(users).where(eq(users.id, id)).execute();

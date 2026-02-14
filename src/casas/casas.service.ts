@@ -1,9 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { db } from '../db/connection';
 import { casas, NuevaCasa } from '../db/schema_casas';
-import { eq , sql} from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { UpdateCasa } from '../db/schema_casas';
-
 
 export interface Casa {
   id: number;
@@ -11,15 +14,13 @@ export interface Casa {
   nombre: string;
   descripcion: string;
   direccion: string;
-  precio: string;           // 🔹 cambiar de number a string
+  precio: string; // 🔹 cambiar de number a string
   disponibilidad: string;
   estado: string;
-  created_at?: Date;        // si Drizzle usa Date
+  created_at?: Date; // si Drizzle usa Date
   updated_at?: Date;
   deleted_at?: Date;
 }
-
-
 
 @Injectable()
 // LISTAR CASAS
@@ -39,23 +40,23 @@ export class CasasService {
     return casa[0];
   }
 
-
-// BUSCAR CASAS
-async buscarCasas(q: string, page = 1) {
+  // BUSCAR CASAS
+  async buscarCasas(q: string, page = 1) {
     const limit = 10;
     const offset = (page - 1) * limit;
-  
+
     return await db
       .select()
       .from(casas)
-      .where(sql`
+      .where(
+        sql`
         MATCH(${casas.nombre}, ${casas.descripcion}, ${casas.direccion})
         AGAINST (${q} IN NATURAL LANGUAGE MODE)
-      `)
+      `,
+      )
       .limit(limit)
       .offset(offset);
   }
-  
 
   // CREAR CASA
   async crearCasa(data: NuevaCasa) {
@@ -77,6 +78,24 @@ async buscarCasas(q: string, page = 1) {
 
     return { message: 'Casa actualizada correctamente' };
   }
+
+  // SOFT DELETE
+  // async eliminarCasa(id: number) {
+  //   const result = await db
+  //     .update(casas)
+  //     .set({
+  //       estado: 'eliminada',
+  //       deleted_at: new Date(),
+  //     })
+  //     .where(eq(casas.id, id))
+  //     .execute();
+
+  //   if (result[0].affectedRows === 0) {
+  //     throw new NotFoundException('Usuario no encontrada');
+  //   }
+
+  //   return { message: 'Usuario eliminado correctamente' };
+  // }
 
   //ELIMINAR CASA
   async eliminarCasa(id: number) {
