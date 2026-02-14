@@ -5,10 +5,11 @@ import { ConfigModule } from "@nestjs/config";
 import { MiddlewareConsumer } from "@nestjs/common";
 import { HttpLoggerMiddleware } from "./http-logger.middleware";
 import { AppController } from './app/app.controller';
+import { UsersModule } from './users/users.module';
 
 
 @Module({
-  imports: [CasasModule],
+  imports: [CasasModule, UsersModule],
   controllers: [AppController],
 })
 

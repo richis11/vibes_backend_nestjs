@@ -8,7 +8,8 @@ CREATE TABLE railway.users (
     stripe_customer_id VARCHAR(255) UNIQUE,
     estado ENUM('activo', 'suspendido', 'eliminado') NOT NULL DEFAULT 'activo',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP deleted_at TIMESTAMP NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
 ) ENGINE = InnoDB;
 
 -- CREATE TABLE users (

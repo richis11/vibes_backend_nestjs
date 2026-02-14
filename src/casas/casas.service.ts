@@ -4,14 +4,7 @@ import { casas, NuevaCasa } from '../db/schema_casas';
 import { eq , sql} from 'drizzle-orm';
 import { UpdateCasa } from '../db/schema_casas';
 
-// export interface Casa {
-//   id: number;
-//   nombre: string;
-//   descripcion: string;
-//   direccion: string;
-//   precio: number;
-//   estado: string;
-// }
+
 export interface Casa {
   id: number;
   host_id: number;
@@ -47,6 +40,7 @@ export class CasasService {
   }
 
 
+// BUSCAR CASAS
 async buscarCasas(q: string, page = 1) {
     const limit = 10;
     const offset = (page - 1) * limit;
