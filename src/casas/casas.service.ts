@@ -8,19 +8,19 @@ import { casas, NuevaCasa } from '../db/schema_casas';
 import { eq, sql } from 'drizzle-orm';
 import { UpdateCasa } from '../db/schema_casas';
 
-export interface Casa {
-  id: number;
-  host_id: number;
-  nombre: string;
-  descripcion: string;
-  direccion: string;
-  precio: string; // 🔹 cambiar de number a string
-  disponibilidad: string;
-  estado: string;
-  created_at?: Date; // si Drizzle usa Date
-  updated_at?: Date;
-  deleted_at?: Date;
-}
+// export interface Casa {
+//   id: number;
+//   host_id: number;
+//   nombre: string;
+//   descripcion: string;
+//   direccion: string;
+//   precio: string; // 🔹 cambiar de number a string
+//   disponibilidad: string;
+//   estado: string;
+//   created_at?: Date; // si Drizzle usa Date
+//   updated_at?: Date;
+//   deleted_at?: Date;
+// }
 
 @Injectable()
 // LISTAR CASAS

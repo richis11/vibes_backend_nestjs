@@ -3,33 +3,33 @@ import { db } from '../db/connection';
 import { reservas, NuevaReserva, UpdateReserva } from '../db/schema_reservas';
 import { eq, or, like } from 'drizzle-orm';
 
-export interface Reserva {
-  id: number;
-  casa_id: number;
-  guest_id: number;
-  fecha_inicio: string;
-  fecha_fin: string;
-  noches: number;
-  precio_por_noche: string;
-  subtotal: string;
-  comision_plataforma: string;
-  total: string;
-  moneda: string;
-  estado:
-    | 'pendiente_pago'
-    | 'pagada'
-    | 'confirmada'
-    | 'cancelada'
-    | 'completada'
-    | 'reembolsada';
-  stripe_payment_intent_id?: string;
-  stripe_transfer_id?: string;
-  cancelada_por?: 'guest' | 'host' | 'system';
-  motivo_cancelacion?: string;
-  created_at?: Date;
-  updated_at?: Date;
-  deleted_at?: Date;
-}
+// export interface Reserva {
+//   id: number;
+//   casa_id: number;
+//   guest_id: number;
+//   fecha_inicio: string;
+//   fecha_fin: string;
+//   noches: number;
+//   precio_por_noche: string;
+//   subtotal: string;
+//   comision_plataforma: string;
+//   total: string;
+//   moneda: string;
+//   estado:
+//     | 'pendiente_pago'
+//     | 'pagada'
+//     | 'confirmada'
+//     | 'cancelada'
+//     | 'completada'
+//     | 'reembolsada';
+//   stripe_payment_intent_id?: string;
+//   stripe_transfer_id?: string;
+//   cancelada_por?: 'guest' | 'host' | 'system';
+//   motivo_cancelacion?: string;
+//   created_at?: Date;
+//   updated_at?: Date;
+//   deleted_at?: Date;
+// }
 
 @Injectable()
 export class ReservasService {

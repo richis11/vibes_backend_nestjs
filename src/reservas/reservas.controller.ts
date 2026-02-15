@@ -8,7 +8,7 @@ import {
   Param,
   Query,
 } from '@nestjs/common';
-import { ReservasService, Reserva } from './reservas.service';
+import { ReservasService } from './reservas.service';
 import type { NuevaReserva, UpdateReserva } from '../db/schema_reservas';
 
 @Controller('reservas')

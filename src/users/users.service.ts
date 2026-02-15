@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { db } from '../db/connection';
 import { users, NuevoUser, UpdateUser } from '../db/schema_users';
-import { like, or, eq } from 'drizzle-orm';
+import { personas } from 'src/db/schema_personas';
+import { like, or, eq, isNull,and } from 'drizzle-orm';
 
 export interface User {
   id: number;
@@ -31,6 +32,18 @@ export class UsersService {
     }
 
     return user[0];
+  }
+
+  //BUSCAR USERS DISPONIBLES (NO TIENEN PERSONA CON FK)
+  async obtenerUsersDisponibles() {
+    return await db
+      .select({
+        id: users.id,
+        email: users.email,
+      })
+      .from(users)
+      .leftJoin(personas, eq(users.id, personas.user_id))
+      .where(and(isNull(personas.user_id), eq(users.estado, "activo")));
   }
 
   // BUSCAR USERS
@@ -71,7 +84,7 @@ export class UsersService {
     return { message: 'Usuario actualizado correctamente' };
   }
 
-    // SOFT DELETE
+  // SOFT DELETE
   // async eliminarUser(id: number) {
   //   const result = await db
   //     .update(users)

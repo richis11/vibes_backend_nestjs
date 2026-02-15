@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Put, Delete, Param, Query} from '@nestjs/common';
-import { CasasService, Casa } from './casas.service';
+import { CasasService } from './casas.service';
 import type { UpdateCasa } from "../db/schema_casas";
 import type{ NuevaCasa } from '../db/schema_casas';
 

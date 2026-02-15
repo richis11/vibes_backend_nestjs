@@ -27,6 +27,11 @@ export class UsersController {
   obtenerUsers() {
     return this.usersService.obtenerUsers();
   }
+  // GET /users disponibles
+  @Get('usersDisponibles')
+  obtenerUsersDisponibles() {
+    return this.usersService.obtenerUsersDisponibles();
+  }
 
   // GET /users/:id
   @Get(':id')
@@ -37,6 +42,8 @@ export class UsersController {
   // POST /users
   @Post()
   async crearUser(@Body() body: NuevoUser) {
+    console.log("DATOS RECIBIDOS:")
+    console.log(body)
     return this.usersService.crearUser(body);
   }
 

@@ -47,6 +47,18 @@ export class HostsService {
       .offset(offset);
   }
 
+  //BUSCAR HOSTS DISPONIBLES (NO TIENEN CASAS CON FK)
+    // async obtenerUsersDisponibles() {
+    //   return await db
+    //     .select({
+    //       id: hosts.id,
+    //       email: hosts.email,
+    //     })
+    //     .from(usehostsrs)
+    //     .leftJoin(personas, eq(hosts.id, casas.user_id))
+    //     .where(and(isNull(casas.host_id), eq(hosts.estado, "activo")));
+    // }
+
   // CREAR HOST
   async crearHost(data: NuevoHost) {
     await db.insert(hosts).values(data);

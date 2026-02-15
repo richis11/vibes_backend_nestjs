@@ -1,16 +1,33 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { db } from '../db/connection';
 import { personas, NuevaPersona, UpdatePersona } from '../db/schema_personas';
-import { like, or, eq, and } from 'drizzle-orm';
+import { hosts } from 'src/db/schema_hosts';
+import { like, or, eq, and, isNull } from 'drizzle-orm';
 
 @Injectable()
 export class PersonasService {
-  // LISTAR PERSONAS (solo activas)
+  // // LISTAR PERSONAS (solo activas)
+  // async obtenerPersonas() {
+  //   return await db
+  //     .select()
+  //     .from(personas)
+  //     .where(eq(personas.estado, 'activo'));
+  // }
+  // LISTAR PERSONAS
   async obtenerPersonas() {
+    return await db.select().from(personas);
+  }
+
+  //BUSCAR USERS DISPONIBLES (NO TIENEN PERSONA CON FK)
+  async obtenerPersonasDisponibles() {
     return await db
-      .select()
+      .select({
+        id: personas.id,
+        nombre: personas.nombre,
+      })
       .from(personas)
-      .where(eq(personas.estado, 'activo'));
+      .leftJoin(hosts, eq(personas.id, hosts.persona_id))
+      .where(and(isNull(hosts.persona_id), eq(personas.estado, 'activo')));
   }
 
   // LISTAR POR ID
@@ -72,31 +89,34 @@ export class PersonasService {
   }
 
   // SOFT DELETE
-//   async eliminarPersona(id: number) {
-//     const result = await db
-//       .update(personas)
-//       .set({
-//         estado: 'eliminado',
-//         deleted_at: new Date(),
-//       })
-//       .where(eq(personas.id, id))
-//       .execute();
+  //   async eliminarPersona(id: number) {
+  //     const result = await db
+  //       .update(personas)
+  //       .set({
+  //         estado: 'eliminado',
+  //         deleted_at: new Date(),
+  //       })
+  //       .where(eq(personas.id, id))
+  //       .execute();
 
-//     if (result[0].affectedRows === 0) {
-//       throw new NotFoundException('Persona no encontrada');
-//     }
+  //     if (result[0].affectedRows === 0) {
+  //       throw new NotFoundException('Persona no encontrada');
+  //     }
 
-//     return { message: 'Persona eliminada correctamente' };
-//   }
+  //     return { message: 'Persona eliminada correctamente' };
+  //   }
 
   // ELIMINAR DEFINITIVO (delete físico por ahora)
-    async eliminarPersona(id: number) {
-      const result = await db.delete(personas).where(eq(personas.id, id)).execute();
-  
-      if (result[0].affectedRows === 0) {
-        throw new NotFoundException('Persona no encontrado');
-      }
-  
-      return { message: 'Persona eliminada correctamente' };
+  async eliminarPersona(id: number) {
+    const result = await db
+      .delete(personas)
+      .where(eq(personas.id, id))
+      .execute();
+
+    if (result[0].affectedRows === 0) {
+      throw new NotFoundException('Persona no encontrado');
     }
+
+    return { message: 'Persona eliminada correctamente' };
+  }
 }

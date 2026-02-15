@@ -27,6 +27,12 @@ export class PersonasController {
   obtenerPersonas() {
     return this.personasService.obtenerPersonas();
   }
+  // GET /users disponibles
+  @Get('personasDisponibles')
+  obtenerPersonasDisponibles() {
+    return this.personasService.obtenerPersonasDisponibles();
+  }
+
 
   // 🔢 GET /personas/:id
   @Get(':id')
