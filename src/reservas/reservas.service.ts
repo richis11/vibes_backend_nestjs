@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { db } from '../db/connection';
 import { reservas, NuevaReserva, UpdateReserva } from '../db/schema_reservas';
 import { eq, or, like } from 'drizzle-orm';
+import { casas } from '../db/schema_casas';
 
 // export interface Reserva {
 //   id: number;
@@ -50,6 +51,35 @@ export class ReservasService {
     }
     return reserva[0];
   }
+  // Buscar reservas por guest_id (persona)
+async obtenerReservasPorGuest(guestId: number) {
+  const resultado = await db
+    .select({
+      id: reservas.id,
+      casa_id: reservas.casa_id,
+      casa_nombre: casas.nombre,
+      guest_id: reservas.guest_id,
+      fecha_inicio: reservas.fecha_inicio,
+      fecha_fin: reservas.fecha_fin,
+      noches: reservas.noches,
+      precio_por_noche: reservas.precio_por_noche,
+      subtotal: reservas.subtotal,
+      comision_plataforma: reservas.comision_plataforma,
+      total: reservas.total,
+      moneda: reservas.moneda,
+      estado: reservas.estado,
+      created_at: reservas.created_at,
+    })
+    .from(reservas)
+    .innerJoin(casas, eq(reservas.casa_id, casas.id))
+    .where(eq(reservas.guest_id, guestId));
+
+  if (!resultado.length) {
+    throw new NotFoundException('No se encontraron reservas para este usuario');
+  }
+
+  return resultado;
+}
 
   // BUSCAR RESERVAS (por guest_id, estado o casa_id opcional)
   async buscarReservas(q: string, page = 1) {

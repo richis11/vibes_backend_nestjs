@@ -40,6 +40,14 @@ export class CasasService {
     return casa[0];
   }
 
+  //LISTAR POR HOST
+  async obtenerCasasPorHost(hostId: number) {
+  return await db
+    .select()
+    .from(casas)
+    .where(eq(casas.host_id, hostId));
+}
+
   // BUSCAR CASAS
   async buscarCasas(q: string, page = 1) {
     const limit = 10;

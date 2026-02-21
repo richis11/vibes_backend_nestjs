@@ -23,6 +23,12 @@ export class CasasController {
     return this.casasService.obtenerCasas();
   }
 
+  // GET /casas/host/:hostId
+@Get('host/:hostId')
+async obtenerCasasPorHost(@Param('hostId') hostId: string) {
+  return await this.casasService.obtenerCasasPorHost(Number(hostId));
+}
+
   // GET /casas/(id)
   @Get(":id")
   async obtenerCasaPorId(@Param("id") id: string) {

@@ -4,6 +4,7 @@ import { db } from '../db/connection';
 import { users } from '../db/schema_users';
 import { personas } from '../db/schema_personas';
 import { eq } from 'drizzle-orm';
+import { hosts } from '../db/schema_hosts';
 // import * as bcrypt from 'bcrypt';
 
 export interface LoginDto {
@@ -50,12 +51,21 @@ export class LoginService {
 
     const persona = personaFound[0] ?? null;
 
+    const hostFound = await db
+      .select({ id: hosts.id })
+      .from(hosts)
+      .where(eq(hosts.persona_id, persona?.id ?? 0))
+      .limit(1);
+
+    const hostId = hostFound[0]?.id ?? null;
+
     // 5. Generar JWT
     const payload = {
       sub: user.id,
       email: user.email,
       is_admin: user.is_admin,
       persona_id: persona?.id ?? null,
+      host_id: hostId,
     };
 
     const token = this.jwtService.sign(payload);
@@ -69,6 +79,7 @@ export class LoginService {
         nombres: persona?.nombres ?? null,
         apellidos: persona?.apellidos ?? null,
         persona_id: persona?.id ?? null,
+        host_id: hostId, // ← nuevo
       },
     };
   }
