@@ -4,6 +4,7 @@ import {
   varchar,
   timestamp,
   mysqlEnum,
+  date,
 } from 'drizzle-orm/mysql-core';
 
 import { InferInsertModel, InferSelectModel } from 'drizzle-orm';
@@ -20,7 +21,11 @@ export const personas = mysqlTable('personas', {
     .references(() => users.id, { onDelete: 'cascade' }),
 
   cedula: varchar('cedula', { length: 30 }),
-  nombre: varchar('nombre', { length: 150 }).notNull(),
+  nombres: varchar('nombres', { length: 100 }).notNull(),
+  apellidos: varchar('apellidos', { length: 100 }).notNull(),
+  fecha_nacimiento: date('fecha_nacimiento', { mode: 'date' })
+    .notNull()
+    .default(new Date('2000-01-01')),
   telefono: varchar('telefono', { length: 30 }),
   direccion: varchar('direccion', { length: 255 }),
   foto_url: varchar('foto_url', { length: 500 }),

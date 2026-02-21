@@ -9,10 +9,12 @@ import { UsersModule } from './users/users.module';
 import { PersonasModule } from './personas/personas.module';
 import { HostsModule } from './hosts/hosts.module';
 import { ReservasModule } from './reservas/reservas.module';
+import { RegisterModule } from './register/register.module';
+import { LoginModule } from './login/login.module';
 
 
 @Module({
-  imports: [CasasModule, UsersModule, PersonasModule, HostsModule, ReservasModule],
+  imports: [CasasModule, UsersModule, PersonasModule, HostsModule, ReservasModule, RegisterModule, LoginModule],
   controllers: [AppController],
 })
 

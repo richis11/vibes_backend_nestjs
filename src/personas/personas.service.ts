@@ -23,7 +23,8 @@ export class PersonasService {
     return await db
       .select({
         id: personas.id,
-        nombre: personas.nombre,
+        nombres: personas.nombres,
+        apellidos: personas.apellidos
       })
       .from(personas)
       .leftJoin(hosts, eq(personas.id, hosts.persona_id))
@@ -60,7 +61,7 @@ export class PersonasService {
       .where(
         and(
           eq(personas.estado, 'activo'),
-          or(like(personas.nombre, `%${q}%`), like(personas.cedula, `%${q}%`)),
+          or(like(personas.nombres, `%${q}%`), like(personas.cedula, `%${q}%`)),
         ),
       )
       .limit(limit)
