@@ -68,6 +68,7 @@ export class LoginService {
         is_admin: user.is_admin,
         nombres: persona?.nombres ?? null,
         apellidos: persona?.apellidos ?? null,
+        persona_id: persona?.id ?? null,
       },
     };
   }
