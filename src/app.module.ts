@@ -11,10 +11,11 @@ import { HostsModule } from './hosts/hosts.module';
 import { ReservasModule } from './reservas/reservas.module';
 import { RegisterModule } from './register/register.module';
 import { LoginModule } from './login/login.module';
+import { CasaImagenesModule } from './casa_imagenes/casa_imagenes.module';
 
 
 @Module({
-  imports: [CasasModule, UsersModule, PersonasModule, HostsModule, ReservasModule, RegisterModule, LoginModule],
+  imports: [CasasModule, UsersModule, PersonasModule, HostsModule, ReservasModule, RegisterModule, LoginModule, CasaImagenesModule],
   controllers: [AppController],
 })
 
