@@ -1,16 +1,10 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Put,
-  Delete,
-  Param,
-  Query,
-} from '@nestjs/common';
-
 import { PersonasService } from './personas.service';
 import type { NuevaPersona, UpdatePersona } from '../db/schema_personas';
+
+import { Controller, Get, Post, Body, Put, Delete, Param, Query,
+  UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 
 @Controller('personas')
 export class PersonasController {
@@ -45,6 +39,25 @@ export class PersonasController {
   async crearPersona(@Body() body: NuevaPersona) {
     return this.personasService.crearPersona(body);
   }
+
+  // Nuevo endpoint — POST /personas/:id/foto
+@Post(':id/foto')
+@UseInterceptors(
+  FileInterceptor('foto', {
+    storage: memoryStorage(),
+    limits: { fileSize: 4 * 1024 * 1024 }, // 4MB
+    fileFilter: (req, file, cb) => {
+      if (!file.mimetype.match(/^image\//)) return cb(new Error('Solo imágenes'), false);
+      cb(null, true);
+    },
+  }),
+)
+subirFoto(
+  @Param('id') id: string,
+  @UploadedFile() file: Express.Multer.File,
+) {
+  return this.personasService.subirFotoPerfil(Number(id), file);
+}
 
   // ✏ PUT /personas/:id
   @Put(':id')

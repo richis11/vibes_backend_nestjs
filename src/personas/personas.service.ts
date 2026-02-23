@@ -3,6 +3,9 @@ import { db } from '../db/connection';
 import { personas, NuevaPersona, UpdatePersona } from '../db/schema_personas';
 import { hosts } from 'src/db/schema_hosts';
 import { like, or, eq, and, isNull } from 'drizzle-orm';
+import cloudinary from '../config/cloudinary.config';
+import { Readable } from 'stream';
+
 
 @Injectable()
 export class PersonasService {
@@ -88,6 +91,27 @@ export class PersonasService {
 
     return { message: 'Persona actualizada correctamente' };
   }
+
+  async subirFotoPerfil(id: number, file: Express.Multer.File) {
+  const result = await new Promise<{ secure_url: string; public_id: string }>(
+    (resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: `vibes/perfiles`, resource_type: 'image' },
+        (error, res) => {
+          if (error || !res) return reject(error);
+          resolve({ secure_url: res.secure_url, public_id: res.public_id });
+        },
+      );
+      Readable.from(file.buffer).pipe(stream);
+    },
+  );
+
+  await db.update(personas)
+    .set({ foto_url: result.secure_url })
+    .where(eq(personas.id, id));
+
+  return { foto_url: result.secure_url };
+}
 
   // SOFT DELETE
   //   async eliminarPersona(id: number) {
