@@ -1,3 +1,4 @@
+// src/reservas/reservas.controller.ts
 import {
   Controller,
   Get,
@@ -7,11 +8,14 @@ import {
   Delete,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ReservasService } from './reservas.service';
 import type { NuevaReserva, UpdateReserva } from '../db/schema_reservas';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('reservas')
+@UseGuards(JwtAuthGuard) // 👈 Todas las rutas de reservas requieren autenticación
 export class ReservasController {
   constructor(private readonly reservasService: ReservasService) {}
 

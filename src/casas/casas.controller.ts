@@ -1,14 +1,18 @@
-import { Controller, Get, Post, Body, Put, Delete, Param, Query} from '@nestjs/common';
+// src/casas/casas.controller.ts
+import { Controller, Get, Post, Body, Put, Delete, Param, Query, UseGuards } from '@nestjs/common';
 import { CasasService } from './casas.service';
-import type { UpdateCasa } from "../db/schema_casas";
-import type{ NuevaCasa } from '../db/schema_casas';
-
+import type { UpdateCasa, NuevaCasa } from '../db/schema_casas';
+import { Public } from '../auth/public.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('casas')
+@UseGuards(JwtAuthGuard) // 👈 Proteger todas las rutas por defecto
 export class CasasController {
   constructor(private readonly casasService: CasasService) {}
 
+   
    // GET /casas/(busqueda)
+  @Public()
    @Get('buscar')
    buscar(
      @Query('q') q: string,
@@ -18,6 +22,7 @@ export class CasasController {
      }
   
   // GET /casas - todas las casas
+  @Public()
   @Get()
   obtenerCasas() {
     return this.casasService.obtenerCasas();
@@ -30,12 +35,11 @@ async obtenerCasasPorHost(@Param('hostId') hostId: string) {
 }
 
   // GET /casas/(id)
+  @Public()
   @Get(":id")
   async obtenerCasaPorId(@Param("id") id: string) {
     return await this.casasService.obtenerCasaPorId(Number(id));
   }
-
- 
 
 
   //POST /casas
