@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { db } from '../db/connection';
 import { reservas, NuevaReserva, UpdateReserva } from '../db/schema_reservas';
-import { eq, or, like } from 'drizzle-orm';
+import { eq, or, like, desc, asc} from 'drizzle-orm';
 import { casas } from '../db/schema_casas';
 
 // export interface Reserva {
@@ -101,8 +101,9 @@ async obtenerReservasPorHost(hostId: number) {
       created_at: reservas.created_at,
     })
     .from(reservas)
-    .innerJoin(casas, eq(reservas.casa_id, casas.id))
-    .where(eq(casas.host_id, hostId));
+  .innerJoin(casas, eq(reservas.casa_id, casas.id))
+  .where(eq(casas.host_id, hostId))
+  .orderBy((reservas.id));
 
   if (!resultado.length) {
     throw new NotFoundException('No se encontraron reservas para este anfitrión');
