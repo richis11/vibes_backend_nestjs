@@ -59,11 +59,11 @@ export class HostsService {
     //     .where(and(isNull(casas.host_id), eq(hosts.estado, "activo")));
     // }
 
-  // CREAR HOST
-  async crearHost(data: NuevoHost) {
-    await db.insert(hosts).values(data);
-    return { message: 'Host creado correctamente' };
-  }
+// CREAR HOST
+async crearHost(data: NuevoHost) {
+  const result = await db.insert(hosts).values(data);
+  return { message: 'Host creado correctamente', host_id: result[0].insertId };
+}
 
   // EDITAR HOST
   async actualizarHost(id: number, data: UpdateHost) {

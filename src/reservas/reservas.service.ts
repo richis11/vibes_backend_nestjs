@@ -81,6 +81,36 @@ async obtenerReservasPorGuest(guestId: number) {
   return resultado;
 }
 
+// Buscar reservas por host_id (a través de casas)
+async obtenerReservasPorHost(hostId: number) {
+  const resultado = await db
+    .select({
+      id: reservas.id,
+      casa_id: reservas.casa_id,
+      casa_nombre: casas.nombre,
+      guest_id: reservas.guest_id,
+      fecha_inicio: reservas.fecha_inicio,
+      fecha_fin: reservas.fecha_fin,
+      noches: reservas.noches,
+      precio_por_noche: reservas.precio_por_noche,
+      subtotal: reservas.subtotal,
+      comision_plataforma: reservas.comision_plataforma,
+      total: reservas.total,
+      moneda: reservas.moneda,
+      estado: reservas.estado,
+      created_at: reservas.created_at,
+    })
+    .from(reservas)
+    .innerJoin(casas, eq(reservas.casa_id, casas.id))
+    .where(eq(casas.host_id, hostId));
+
+  if (!resultado.length) {
+    throw new NotFoundException('No se encontraron reservas para este anfitrión');
+  }
+
+  return resultado;
+}
+
   // BUSCAR RESERVAS (por guest_id, estado o casa_id opcional)
   async buscarReservas(q: string, page = 1) {
     const limit = 10;

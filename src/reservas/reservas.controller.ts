@@ -36,6 +36,11 @@ export class ReservasController {
   async obtenerReservasPorGuest(@Param('guestId') guestId: string) {
     return await this.reservasService.obtenerReservasPorGuest(Number(guestId));
   }
+  // GET /reservas/host/:hosttId
+  @Get('host/:hostId')
+  async obtenerReservasPorHost(@Param('hostId') hostId: string) {
+    return await this.reservasService.obtenerReservasPorHost(Number(hostId));
+  }
 
   // GET /reservas/:id
   @Get(':id')
