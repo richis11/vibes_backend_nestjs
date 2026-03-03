@@ -19,6 +19,7 @@ import { CasaImagenesModule } from './casa_imagenes/casa_imagenes.module';
 
 // 👇 Importar guard
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { PineconeModule } from './pinecone/pinecone.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
     RegisterModule,
     LoginModule,
     CasaImagenesModule,
+    PineconeModule,
   ],
   controllers: [AppController],
   providers: [
