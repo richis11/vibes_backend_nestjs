@@ -1,98 +1,263 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🏠 Vibes — Backend API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST para la plataforma **Vibes**, un sistema de alquiler de propiedades corto plazo construido con **NestJS**, **Drizzle ORM** y **MySQL**.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 📦 Stack Tecnológico
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| Capa | Tecnología |
+|------|-----------|
+| Framework | NestJS 11 |
+| ORM | Drizzle ORM |
+| Base de datos | MySQL 8 |
+| Autenticación | JWT (jsonwebtoken + @nestjs/jwt) |
+| Almacenamiento de imágenes | Cloudinary |
+| Búsqueda semántica | Pinecone + OpenAI Embeddings |
+| Subida de archivos | Multer (memoria) |
+| Deployment | Railway |
 
-## Project setup
+---
 
-```bash
-$ npm install
+## 🗂️ Estructura del Proyecto
+
+```
+src/
+├── app/                    # Controlador raíz (health check)
+├── auth/                   # Guard JWT + decorador @Public
+├── casas/                  # CRUD de propiedades
+├── casa_imagenes/          # Gestión de imágenes por Cloudinary
+├── hosts/                  # CRUD de anfitriones
+├── personas/               # CRUD de perfiles de usuario
+├── reservas/               # CRUD de reservas
+├── users/                  # CRUD de usuarios (credenciales)
+├── login/                  # Autenticación y generación de JWT
+├── register/               # Registro atómico (user + persona)
+├── pinecone/               # Sincronización vectorial con Pinecone
+├── db/
+│   ├── connection.ts       # Pool MySQL + instancia Drizzle
+│   ├── schema_users.ts
+│   ├── schema_personas.ts
+│   ├── schema_hosts.ts
+│   ├── schema_casas.ts
+│   ├── schema_casa_imagenes.ts
+│   └── schema_reservas.ts
+└── config/
+    └── cloudinary.config.ts
 ```
 
-## Compile and run the project
+---
+
+## 🚀 Instalación y Ejecución
+
+### Requisitos
+
+- Node.js >= 18
+- MySQL 8 en ejecución
+- Cuenta en Cloudinary
+- Cuenta en Pinecone + OpenAI API Key
+
+### 1. Clonar e instalar dependencias
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+git clone <repo-url>
+cd backend-app-vibes
+npm install
 ```
 
-## Run tests
+### 2. Variables de entorno
+
+Crear un archivo `.env` en la raíz del proyecto:
+
+```env
+# Base de datos
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=tu_password
+DB_NAME=vibes
+
+# JWT
+JWT_SECRET=tu_secreto_seguro
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=tu_cloud_name
+CLOUDINARY_API_KEY=tu_api_key
+CLOUDINARY_API_SECRET=tu_api_secret
+
+# Pinecone
+PINECONE_API_KEY=tu_pinecone_key
+PINECONE_HOST=tu_pinecone_host
+
+# OpenAI
+OPENAI_API_KEY=tu_openai_key
+```
+
+### 3. Ejecutar la base de datos
+
+Ejecutar el script SQL ubicado en `src/db/db.sql` en tu instancia MySQL para crear las tablas y los índices necesarios.
+
+### 4. Iniciar el servidor
 
 ```bash
-# unit tests
-$ npm run test
+# Desarrollo (con hot-reload)
+npm run start:dev
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Producción
+npm run start:prod
 ```
 
-## Deployment
+El servidor escucha en **http://localhost:3000**
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+---
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## 🔐 Autenticación
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+La API utiliza **JWT Bearer Tokens**. Las rutas protegidas requieren el header:
+
+```
+Authorization: Bearer <token>
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Las rutas públicas están marcadas con el decorador `@Public()` y no requieren token.
 
-## Resources
+### Endpoints públicos
 
-Check out a few resources that may come in handy when working with NestJS:
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/login` | Iniciar sesión, devuelve JWT |
+| `POST` | `/register` | Registro de nuevo usuario + persona |
+| `GET` | `/casas` | Listar todas las casas |
+| `GET` | `/casas/:id` | Detalle de una casa |
+| `GET` | `/casas/buscar?q=` | Búsqueda full-text en casas |
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+---
 
-## Support
+## 📡 Endpoints
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Auth
 
-## Stay in touch
+| Método | Ruta | Body | Descripción |
+|--------|------|------|-------------|
+| `POST` | `/login` | `{ email, password }` | Devuelve `access_token` + datos del usuario |
+| `POST` | `/register` | `{ email, password, nombres, apellidos, fecha_nacimiento }` | Crea user + persona en transacción atómica |
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### Users
 
-## License
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/users` | Listar todos los usuarios |
+| `GET` | `/users/:id` | Usuario por ID |
+| `GET` | `/users/usersDisponibles` | Usuarios sin perfil de persona asignado |
+| `GET` | `/users/buscar?q=` | Buscar usuarios por email |
+| `POST` | `/users` | Crear usuario |
+| `PUT` | `/users/:id` | Actualizar usuario |
+| `DELETE` | `/users/:id` | Eliminar usuario |
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Personas
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/personas` | Listar personas |
+| `GET` | `/personas/:id` | Persona por ID |
+| `GET` | `/personas/personasDisponibles` | Personas sin host asignado |
+| `GET` | `/personas/buscar?q=` | Buscar por nombre o cédula |
+| `POST` | `/personas` | Crear persona |
+| `POST` | `/personas/:id/foto` | Subir foto de perfil (multipart) |
+| `PUT` | `/personas/:id` | Actualizar persona |
+| `DELETE` | `/personas/:id` | Eliminar persona |
+
+### Hosts
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/hosts` | Listar hosts activos |
+| `GET` | `/hosts/:id` | Host por ID |
+| `GET` | `/hosts/buscar?q=` | Buscar hosts |
+| `POST` | `/hosts` | Crear host |
+| `PUT` | `/hosts/:id` | Actualizar host |
+| `DELETE` | `/hosts/:id` | Eliminar host |
+
+### Casas
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/casas` | Listar casas (público) |
+| `GET` | `/casas/:id` | Detalle de casa (público) |
+| `GET` | `/casas/host/:hostId` | Casas por anfitrión |
+| `GET` | `/casas/buscar?q=` | Búsqueda full-text MySQL (público) |
+| `POST` | `/casas` | Crear casa (sincroniza con Pinecone) |
+| `POST` | `/casas/sincronizar-pinecone` | Sincronizar todas las casas con Pinecone |
+| `PUT` | `/casas/:id` | Actualizar casa (sincroniza con Pinecone) |
+| `DELETE` | `/casas/:id` | Eliminar casa (elimina de Pinecone) |
+
+### Imágenes de Casas
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/casa-imagenes/:casaId` | Imágenes activas de una casa |
+| `POST` | `/casa-imagenes/upload/:casaId` | Subir imagen (multipart, max 5MB) |
+| `PATCH` | `/casa-imagenes/:casaId/principal/:imagenId` | Marcar imagen como principal |
+| `DELETE` | `/casa-imagenes/:imagenId` | Eliminar imagen (Cloudinary + DB) |
+
+### Reservas
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/reservas` | Listar todas las reservas |
+| `GET` | `/reservas/:id` | Reserva por ID |
+| `GET` | `/reservas/guest/:guestId` | Reservas de un huésped |
+| `GET` | `/reservas/host/:hostId` | Reservas recibidas por un host |
+| `GET` | `/reservas/buscar?q=` | Buscar reservas |
+| `POST` | `/reservas` | Crear reserva |
+| `PUT` | `/reservas/:id` | Actualizar reserva (ej. cambiar estado) |
+| `DELETE` | `/reservas/:id` | Eliminar reserva |
+
+---
+
+## 🗃️ Modelo de Datos
+
+```
+users ──< personas ──< hosts ──< casas ──< casa_imagenes
+                  └──────────────────< reservas >──────┘
+```
+
+| Tabla | Descripción |
+|-------|-------------|
+| `users` | Credenciales de acceso (email + password_hash) |
+| `personas` | Perfil personal vinculado a un user (1:1) |
+| `hosts` | Perfil de anfitrión vinculado a una persona (1:1) |
+| `casas` | Propiedades publicadas por un host |
+| `casa_imagenes` | Imágenes de Cloudinary asociadas a una casa |
+| `reservas` | Reservas entre una casa y un guest (persona) |
+
+---
+
+## 🔍 Búsqueda Semántica con Pinecone
+
+Cuando se crea o actualiza una casa, el backend:
+
+1. Construye un texto descriptivo con nombre, descripción, dirección, precio y disponibilidad.
+2. Genera un embedding vectorial usando **OpenAI** (`text-embedding-3-small`).
+3. Hace upsert del vector en el índice `casas` de **Pinecone**.
+
+Esto permite al chatbot del frontend realizar búsquedas semánticas (ej. *"casas baratas cerca del mar"*) con resultados relevantes.
+
+Para sincronizar manualmente todas las casas existentes:
+
+```
+POST /casas/sincronizar-pinecone
+```
+
+---
+
+## 🖼️ Gestión de Imágenes
+
+Las imágenes se suben en **memoria** (sin disco) usando Multer y se almacenan directamente en **Cloudinary** bajo la carpeta `vibes/casas/:casaId`. Se guarda el `public_id` de Cloudinary en la base de datos para poder eliminarlas correctamente.
+
+- Tamaño máximo: **5MB** por imagen
+- Solo se aceptan archivos `image/*`
+- La primera imagen subida se marca automáticamente como **principal**
+
+---
+

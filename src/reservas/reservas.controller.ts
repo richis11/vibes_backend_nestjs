@@ -10,6 +10,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Public } from '../auth/public.decorator';
 import { ReservasService } from './reservas.service';
 import type { NuevaReserva, UpdateReserva } from '../db/schema_reservas';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -18,6 +19,13 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard) // 👈 Todas las rutas de reservas requieren autenticación
 export class ReservasController {
   constructor(private readonly reservasService: ReservasService) {}
+
+// GET /reservas/casa/:casaId/fechas-ocupadas  (público)
+@Public()
+@Get('casa/:casaId/fechas-ocupadas')
+async obtenerFechasOcupadas(@Param('casaId') casaId: string) {
+  return await this.reservasService.obtenerFechasOcupadas(Number(casaId));
+}
 
   // GET /reservas/buscar?q=algo&page=1
   @Get('buscar')
