@@ -252,7 +252,10 @@ async obtenerReservasPorHost(hostId: number, usuario: UsuarioJwt) {
 
   // CREAR RESERVA
   async crearReserva(data: CrearReservaDto, usuario: UsuarioJwt) {
-    const guest_id = usuario.is_admin ? data.guest_id : usuario.persona_id;
+    // El admin puede reservar a nombre de otro; si no indica guest_id, reserva para sí mismo
+    const guest_id = usuario.is_admin
+      ? (data.guest_id ?? usuario.persona_id)
+      : usuario.persona_id;
     if (!guest_id) {
       throw new BadRequestException('guest_id es obligatorio');
     }
