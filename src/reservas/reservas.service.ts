@@ -14,7 +14,6 @@ import {
   asc,
   and,
   inArray,
-  notInArray,
   lt,
   gt,
   ne,
@@ -380,6 +379,8 @@ async obtenerReservasPorHost(hostId: number, usuario: UsuarioJwt) {
   }
 
   // ─── Obtener fechas ocupadas de una casa (público, para el calendario) ─────
+  // Mismos estados que bloquean una reserva nueva (ver cotizarFechasLibres);
+  // fecha_fin es el día de salida, así que ese día queda libre para entrar.
   async obtenerFechasOcupadas(casaId: number) {
     const reservasActivas = await db
       .select({
@@ -390,7 +391,8 @@ async obtenerReservasPorHost(hostId: number, usuario: UsuarioJwt) {
       .where(
         and(
           eq(reservas.casa_id, casaId),
-          notInArray(reservas.estado, ['cancelada', 'reembolsada']),
+          inArray(reservas.estado, [...ESTADOS_ACTIVOS]),
+          gt(reservas.fecha_fin, ayer()),
         ),
       );
 
