@@ -272,7 +272,7 @@ async obtenerReservasPorHost(hostId: number, usuario: UsuarioJwt) {
       'motivo_cancelacion',
     ]);
 
-    const precio = await db.transaction(async (tx) => {
+    const creada = await db.transaction(async (tx) => {
       const precio = await cotizarFechasLibres(
         tx,
         data.casa_id,
@@ -280,14 +280,14 @@ async obtenerReservasPorHost(hostId: number, usuario: UsuarioJwt) {
         data.fecha_fin,
       );
 
-      await tx
+      const [insertada] = await tx
         .insert(reservas)
         .values({ ...permitido, ...precio, casa_id: data.casa_id, guest_id });
 
-      return precio;
+      return { id: insertada.insertId, ...precio };
     });
 
-    return { message: 'Reserva creada correctamente', ...precio };
+    return { message: 'Reserva creada correctamente', ...creada };
   }
 
   // ACTUALIZAR RESERVA

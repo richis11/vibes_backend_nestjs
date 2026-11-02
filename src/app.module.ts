@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { MiddlewareConsumer } from '@nestjs/common';
 import { HttpLoggerMiddleware } from './http-logger.middleware';
@@ -16,6 +17,7 @@ import { ReservasModule } from './reservas/reservas.module';
 import { RegisterModule } from './register/register.module';
 import { LoginModule } from './login/login.module';
 import { CasaImagenesModule } from './casa_imagenes/casa_imagenes.module';
+import { PagosModule } from './pagos/pagos.module';
 
 // 👇 Importar guard
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
@@ -24,6 +26,8 @@ import { PineconeModule } from './pinecone/pinecone.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Tareas programadas (p. ej. cancelar reservas sin pago)
+    ScheduleModule.forRoot(),
     // 👇 JWT disponible globalmente
     JwtModule.register({
       global: true,
@@ -39,6 +43,7 @@ import { PineconeModule } from './pinecone/pinecone.module';
     LoginModule,
     CasaImagenesModule,
     PineconeModule,
+    PagosModule,
   ],
   controllers: [AppController],
   providers: [

@@ -219,3 +219,23 @@ CREATE INDEX idx_reservas_fechas ON reservas(casa_id, fecha_inicio, fecha_fin);
 CREATE INDEX idx_reservas_estado ON reservas(estado);
 
 -- ____________________________________________________________________
+-- PAGOS (2026-11-02): transferencia/depósito con comprobante; luego PayPhone
+CREATE TABLE railway.pagos (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  reserva_id BIGINT UNSIGNED NOT NULL,
+  metodo ENUM('transferencia','payphone') NOT NULL,
+  estado ENUM('en_revision','aprobado','rechazado') NOT NULL DEFAULT 'en_revision',
+  monto DECIMAL(10,2) NOT NULL,
+  moneda VARCHAR(10) NOT NULL DEFAULT 'USD',
+  referencia VARCHAR(255) NULL,
+  comprobante_url VARCHAR(500) NULL,
+  comprobante_public_id VARCHAR(255) NULL,
+  motivo_rechazo VARCHAR(255) NULL,
+  revisado_por BIGINT UNSIGNED NULL,
+  revisado_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pagos_reserva FOREIGN KEY (reserva_id) REFERENCES reservas(id) ON DELETE CASCADE,
+  INDEX idx_pagos_reserva_id (reserva_id),
+  INDEX idx_pagos_estado (estado)
+);
