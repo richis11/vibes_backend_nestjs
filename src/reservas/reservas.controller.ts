@@ -8,15 +8,14 @@ import {
   Delete,
   Param,
   Query,
-  UseGuards,
 } from '@nestjs/common';
-import { Public } from '../auth/public.decorator';
 import { ReservasService } from './reservas.service';
-import type { NuevaReserva, UpdateReserva } from '../db/schema_reservas';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CrearReservaDto, UpdateReservaDto } from './reservas.dto';
+import { Public, SoloAdmin } from '../auth/public.decorator';
+import { UsuarioActual } from '../auth/usuario.decorator';
+import type { UsuarioJwt } from '../auth/usuario.decorator';
 
 @Controller('reservas')
-@UseGuards(JwtAuthGuard) // 👈 Todas las rutas de reservas requieren autenticación
 export class ReservasController {
   constructor(private readonly reservasService: ReservasService) {}
 
@@ -28,12 +27,14 @@ async obtenerFechasOcupadas(@Param('casaId') casaId: string) {
 }
 
   // GET /reservas/buscar?q=algo&page=1
+  @SoloAdmin()
   @Get('buscar')
   buscar(@Query('q') q: string, @Query('page') page = '1') {
     return this.reservasService.buscarReservas(q, Number(page));
   }
 
   // GET /reservas - todas las reservas
+  @SoloAdmin()
   @Get()
   obtenerReservas() {
     return this.reservasService.obtenerReservas();
@@ -41,36 +42,61 @@ async obtenerFechasOcupadas(@Param('casaId') casaId: string) {
 
   // GET /reservas/guest/:guestId
   @Get('guest/:guestId')
-  async obtenerReservasPorGuest(@Param('guestId') guestId: string) {
-    return await this.reservasService.obtenerReservasPorGuest(Number(guestId));
+  async obtenerReservasPorGuest(
+    @Param('guestId') guestId: string,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return await this.reservasService.obtenerReservasPorGuest(
+      Number(guestId),
+      usuario,
+    );
   }
   // GET /reservas/host/:hosttId
   @Get('host/:hostId')
-  async obtenerReservasPorHost(@Param('hostId') hostId: string) {
-    return await this.reservasService.obtenerReservasPorHost(Number(hostId));
+  async obtenerReservasPorHost(
+    @Param('hostId') hostId: string,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return await this.reservasService.obtenerReservasPorHost(
+      Number(hostId),
+      usuario,
+    );
   }
 
   // GET /reservas/:id
   @Get(':id')
-  async obtenerReservaPorId(@Param('id') id: string) {
-    return await this.reservasService.obtenerReservaPorId(Number(id));
+  async obtenerReservaPorId(
+    @Param('id') id: string,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return await this.reservasService.obtenerReservaPorId(Number(id), usuario);
   }
 
   // POST /reservas
   @Post()
-  async crearReserva(@Body() body: NuevaReserva) {
-    return this.reservasService.crearReserva(body);
+  async crearReserva(
+    @Body() body: CrearReservaDto,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return this.reservasService.crearReserva(body, usuario);
   }
 
   // PUT /reservas/:id
   @Put(':id')
-  actualizarReserva(@Param('id') id: string, @Body() data: UpdateReserva) {
-    return this.reservasService.actualizarReserva(Number(id), data);
+  actualizarReserva(
+    @Param('id') id: string,
+    @Body() data: UpdateReservaDto,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return this.reservasService.actualizarReserva(Number(id), data, usuario);
   }
 
   // DELETE /reservas/:id (soft delete)
   @Delete(':id')
-  eliminarReserva(@Param('id') id: string) {
-    return this.reservasService.eliminarReserva(Number(id));
+  eliminarReserva(
+    @Param('id') id: string,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return this.reservasService.eliminarReserva(Number(id), usuario);
   }
 }

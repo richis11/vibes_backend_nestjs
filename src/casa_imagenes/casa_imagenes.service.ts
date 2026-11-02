@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { db } from '../db/connection';
 import { casaImagenes } from '../db/schema_casa_imagenes';
 import { eq, and } from 'drizzle-orm';
 import cloudinary from '../config/cloudinary.config';
 import { Readable } from 'stream';
+import { exigirDuenoDeCasa } from '../auth/permisos';
+import { UsuarioJwt } from '../auth/usuario.decorator';
 
 @Injectable()
 export class CasaImagenesService {
@@ -12,8 +18,14 @@ export class CasaImagenesService {
   async subirImagen(
     casaId: number,
     file: Express.Multer.File,
+    usuario: UsuarioJwt,
     esPrincipal = false,
   ) {
+    if (!file) {
+      throw new BadRequestException('Falta el archivo "imagen"');
+    }
+    await exigirDuenoDeCasa(casaId, usuario);
+
     // Subir a Cloudinary usando stream (sin guardar en disco)
     const url = await new Promise<{ secure_url: string; public_id: string }>(
       (resolve, reject) => {
@@ -72,7 +84,22 @@ export class CasaImagenesService {
   }
 
   // Marcar como principal
-  async marcarPrincipal(casaId: number, imagenId: number) {
+  async marcarPrincipal(casaId: number, imagenId: number, usuario: UsuarioJwt) {
+    await exigirDuenoDeCasa(casaId, usuario);
+
+    // La imagen debe pertenecer a esta casa
+    const imagen = await db
+      .select({ id: casaImagenes.id })
+      .from(casaImagenes)
+      .where(
+        and(eq(casaImagenes.id, imagenId), eq(casaImagenes.casa_id, casaId)),
+      )
+      .limit(1);
+
+    if (!imagen.length) {
+      throw new NotFoundException('Imagen no encontrada');
+    }
+
     // Quitar principal actual
     await db
       .update(casaImagenes)
@@ -80,20 +107,16 @@ export class CasaImagenesService {
       .where(eq(casaImagenes.casa_id, casaId));
 
     // Marcar la nueva
-    const result = await db
+    await db
       .update(casaImagenes)
       .set({ es_principal: true })
       .where(eq(casaImagenes.id, imagenId));
-
-    if (result[0].affectedRows === 0) {
-      throw new NotFoundException('Imagen no encontrada');
-    }
 
     return { message: 'Imagen principal actualizada' };
   }
 
   // Eliminar imagen (soft delete + borrar de Cloudinary)
-  async eliminarImagen(imagenId: number) {
+  async eliminarImagen(imagenId: number, usuario: UsuarioJwt) {
     const imagen = await db
       .select()
       .from(casaImagenes)
@@ -103,6 +126,8 @@ export class CasaImagenesService {
     if (!imagen.length) {
       throw new NotFoundException('Imagen no encontrada');
     }
+
+    await exigirDuenoDeCasa(imagen[0].casa_id, usuario);
 
     // Eliminar de Cloudinary si tiene public_id
     if (imagen[0].public_id) {

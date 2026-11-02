@@ -7,15 +7,9 @@ import { db } from '../db/connection';
 import { users } from '../db/schema_users';
 import { personas } from '../db/schema_personas';
 import { eq } from 'drizzle-orm';
-// import * as bcrypt from 'bcrypt'; // npm install bcrypt @types/bcrypt
+import { hashPassword } from '../auth/password';
 
-export interface RegisterDto {
-  email: string;
-  password: string;
-  nombres: string;
-  apellidos: string;
-  fecha_nacimiento: Date; // o Date, según tu schema
-}
+import { RegisterDto } from './register.dto';
 
 @Injectable()
 export class RegisterService {
@@ -32,8 +26,9 @@ export class RegisterService {
     }
 
     // 2. Transacción: crear user y persona de forma atómica
+    const password_hash = await hashPassword(data.password);
+
     await db.transaction(async (tx) => {
-      const password_hash = data.password;
 
       const userResult = await tx
         .insert(users)

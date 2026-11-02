@@ -1,5 +1,8 @@
 import { PersonasService } from './personas.service';
-import type { NuevaPersona, UpdatePersona } from '../db/schema_personas';
+import { CrearPersonaDto, UpdatePersonaDto } from './personas.dto';
+import { SoloAdmin } from '../auth/public.decorator';
+import { UsuarioActual } from '../auth/usuario.decorator';
+import type { UsuarioJwt } from '../auth/usuario.decorator';
 
 import { Controller, Get, Post, Body, Put, Delete, Param, Query,
   UploadedFile, UseInterceptors } from '@nestjs/common';
@@ -11,17 +14,20 @@ export class PersonasController {
   constructor(private readonly personasService: PersonasService) {}
 
   // 🔎 GET /personas/buscar?q=algo&page=1
+  @SoloAdmin()
   @Get('buscar')
   buscar(@Query('q') q: string, @Query('page') page = '1') {
     return this.personasService.buscarPersonas(q, Number(page));
   }
 
   // 📄 GET /personas
+  @SoloAdmin()
   @Get()
   obtenerPersonas() {
     return this.personasService.obtenerPersonas();
   }
   // GET /users disponibles
+  @SoloAdmin()
   @Get('personasDisponibles')
   obtenerPersonasDisponibles() {
     return this.personasService.obtenerPersonasDisponibles();
@@ -30,14 +36,20 @@ export class PersonasController {
 
   // 🔢 GET /personas/:id
   @Get(':id')
-  async obtenerPersonaPorId(@Param('id') id: string) {
-    return await this.personasService.obtenerPersonaPorId(Number(id));
+  async obtenerPersonaPorId(
+    @Param('id') id: string,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return await this.personasService.obtenerPersonaPorId(Number(id), usuario);
   }
 
   // ➕ POST /personas
   @Post()
-  async crearPersona(@Body() body: NuevaPersona) {
-    return this.personasService.crearPersona(body);
+  async crearPersona(
+    @Body() body: CrearPersonaDto,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return this.personasService.crearPersona(body, usuario);
   }
 
   // Nuevo endpoint — POST /personas/:id/foto
@@ -55,19 +67,27 @@ export class PersonasController {
 subirFoto(
   @Param('id') id: string,
   @UploadedFile() file: Express.Multer.File,
+  @UsuarioActual() usuario: UsuarioJwt,
 ) {
-  return this.personasService.subirFotoPerfil(Number(id), file);
+  return this.personasService.subirFotoPerfil(Number(id), file, usuario);
 }
 
   // ✏ PUT /personas/:id
   @Put(':id')
-  actualizarPersona(@Param('id') id: string, @Body() data: UpdatePersona) {
-    return this.personasService.actualizarPersona(Number(id), data);
+  actualizarPersona(
+    @Param('id') id: string,
+    @Body() data: UpdatePersonaDto,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return this.personasService.actualizarPersona(Number(id), data, usuario);
   }
 
   // 🗑 DELETE /personas/:id (soft delete)
   @Delete(':id')
-  eliminarPersona(@Param('id') id: string) {
-    return this.personasService.eliminarPersona(Number(id));
+  eliminarPersona(
+    @Param('id') id: string,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return this.personasService.eliminarPersona(Number(id), usuario);
   }
 }

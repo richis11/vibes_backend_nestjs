@@ -4,9 +4,11 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
+import { IS_PUBLIC_KEY, SOLO_ADMIN_KEY } from './public.decorator';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -17,10 +19,10 @@ export class JwtAuthGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     // Verificar si la ruta es pública
-    const isPublic = this.reflector.get<boolean>(
-      'isPublic',
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
-    );
+      context.getClass(),
+    ]);
 
     if (isPublic) {
       return true;
@@ -35,12 +37,23 @@ export class JwtAuthGuard implements CanActivate {
 
     const token = authHeader.replace('Bearer ', '');
 
+    let payload;
     try {
-      const payload = this.jwtService.verify(token);
+      payload = this.jwtService.verify(token);
       request.user = payload; // Guardar info del usuario en la request
-      return true;
     } catch (error) {
       throw new UnauthorizedException('Token inválido o expirado');
     }
+
+    const soloAdmin = this.reflector.getAllAndOverride<boolean>(
+      SOLO_ADMIN_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (soloAdmin && !payload.is_admin) {
+      throw new ForbiddenException('Solo un administrador puede hacer esto');
+    }
+
+    return true;
   }
 }

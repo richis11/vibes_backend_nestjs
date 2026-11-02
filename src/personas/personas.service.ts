@@ -1,10 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { db } from '../db/connection';
-import { personas, NuevaPersona, UpdatePersona } from '../db/schema_personas';
-import { hosts } from 'src/db/schema_hosts';
+import { personas } from '../db/schema_personas';
+import { hosts } from '../db/schema_hosts';
 import { like, or, eq, and, isNull } from 'drizzle-orm';
 import cloudinary from '../config/cloudinary.config';
 import { Readable } from 'stream';
+import { exigir, exigirCampos, sinCamposDeAdmin } from '../auth/permisos';
+import { UsuarioJwt } from '../auth/usuario.decorator';
+import { CrearPersonaDto, UpdatePersonaDto } from './personas.dto';
+
+function esMismaPersonaOAdmin(id: number, usuario: UsuarioJwt) {
+  return usuario.is_admin || usuario.persona_id === id;
+}
 
 
 @Injectable()
@@ -35,7 +46,8 @@ export class PersonasService {
   }
 
   // LISTAR POR ID
-  async obtenerPersonaPorId(id: number) {
+  // Otros usuarios solo ven datos públicos (sin cédula, teléfono, dirección)
+  async obtenerPersonaPorId(id: number, usuario: UsuarioJwt) {
     const persona = await db
       .select()
       .from(personas)
@@ -46,7 +58,12 @@ export class PersonasService {
       throw new NotFoundException('Persona no encontrada');
     }
 
-    return persona[0];
+    if (esMismaPersonaOAdmin(id, usuario)) {
+      return persona[0];
+    }
+
+    const { id: personaId, nombres, apellidos, foto_url } = persona[0];
+    return { id: personaId, nombres, apellidos, foto_url };
   }
 
   // BUSCAR PERSONAS
@@ -72,16 +89,30 @@ export class PersonasService {
   }
 
   // CREAR PERSONA
-  async crearPersona(data: NuevaPersona) {
-    await db.insert(personas).values(data);
+  async crearPersona(data: CrearPersonaDto, usuario: UsuarioJwt) {
+    const user_id = usuario.is_admin ? data.user_id : usuario.sub;
+    if (!user_id) {
+      throw new BadRequestException('user_id es obligatorio');
+    }
+
+    const permitido = sinCamposDeAdmin(usuario, data, ['estado']);
+    await db.insert(personas).values({ ...permitido, user_id });
     return { message: 'Persona creada correctamente' };
   }
 
   // EDITAR PERSONA
-  async actualizarPersona(id: number, data: UpdatePersona) {
+  async actualizarPersona(
+    id: number,
+    data: UpdatePersonaDto,
+    usuario: UsuarioJwt,
+  ) {
+    exigir(esMismaPersonaOAdmin(id, usuario));
+
+    const permitido = sinCamposDeAdmin(usuario, data, ['user_id', 'estado']);
+
     const result = await db
       .update(personas)
-      .set(data)
+      .set(exigirCampos(permitido))
       .where(eq(personas.id, id))
       .execute();
 
@@ -92,7 +123,13 @@ export class PersonasService {
     return { message: 'Persona actualizada correctamente' };
   }
 
-  async subirFotoPerfil(id: number, file: Express.Multer.File) {
+  async subirFotoPerfil(
+    id: number,
+    file: Express.Multer.File,
+    usuario: UsuarioJwt,
+  ) {
+  exigir(esMismaPersonaOAdmin(id, usuario));
+
   const result = await new Promise<{ secure_url: string; public_id: string }>(
     (resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
@@ -132,7 +169,9 @@ export class PersonasService {
   //   }
 
   // ELIMINAR DEFINITIVO (delete físico por ahora)
-  async eliminarPersona(id: number) {
+  async eliminarPersona(id: number, usuario: UsuarioJwt) {
+    exigir(esMismaPersonaOAdmin(id, usuario));
+
     const result = await db
       .delete(personas)
       .where(eq(personas.id, id))

@@ -1,12 +1,12 @@
 // src/casas/casas.controller.ts
-import { Controller, Get, Post, Body, Put, Delete, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Delete, Param, Query } from '@nestjs/common';
 import { CasasService } from './casas.service';
-import type { UpdateCasa, NuevaCasa } from '../db/schema_casas';
-import { Public } from '../auth/public.decorator';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CrearCasaDto, UpdateCasaDto } from './casas.dto';
+import { Public, SoloAdmin } from '../auth/public.decorator';
+import { UsuarioActual } from '../auth/usuario.decorator';
+import type { UsuarioJwt } from '../auth/usuario.decorator';
 
 @Controller('casas')
-@UseGuards(JwtAuthGuard)
 export class CasasController {
   constructor(private readonly casasService: CasasService) {}
 
@@ -25,7 +25,7 @@ export class CasasController {
   }
 
   // POST /casas/sincronizar-pinecone  👈 endpoint de sincronización manual
-  // @Public()
+  @SoloAdmin()
   @Post('sincronizar-pinecone')
   sincronizarPinecone() {
     return this.casasService.sincronizarPinecone();
@@ -46,20 +46,30 @@ export class CasasController {
 
   // POST /casas
   @Post()
-  crearCasa(@Body() body: NuevaCasa) {
-    return this.casasService.crearCasa(body);
+  crearCasa(
+    @Body() body: CrearCasaDto,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return this.casasService.crearCasa(body, usuario);
   }
 
   // PUT /casas/:id
   @Put(':id')
-  actualizarCasa(@Param('id') id: string, @Body() data: UpdateCasa) {
-    return this.casasService.actualizarCasa(Number(id), data);
+  actualizarCasa(
+    @Param('id') id: string,
+    @Body() data: UpdateCasaDto,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return this.casasService.actualizarCasa(Number(id), data, usuario);
   }
 
   // DELETE /casas/:id
   @Delete(':id')
-  eliminarCasa(@Param('id') id: string) {
-    return this.casasService.eliminarCasa(Number(id));
+  eliminarCasa(
+    @Param('id') id: string,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return this.casasService.eliminarCasa(Number(id), usuario);
   }
 }
 

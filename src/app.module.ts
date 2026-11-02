@@ -42,11 +42,11 @@ import { PineconeModule } from './pinecone/pinecone.module';
   ],
   controllers: [AppController],
   providers: [
-    // 👇 Guard global opcional (si quieres proteger todas las rutas por defecto)
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: JwtAuthGuard,
-    // },
+    // Todas las rutas requieren JWT salvo las marcadas con @Public()
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
   ],
 })
 export class AppModule {

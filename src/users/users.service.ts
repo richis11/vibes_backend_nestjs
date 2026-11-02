@@ -1,8 +1,26 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { db } from '../db/connection';
-import { users, NuevoUser, UpdateUser } from '../db/schema_users';
-import { personas } from 'src/db/schema_personas';
-import { like, or, eq, isNull,and } from 'drizzle-orm';
+import { users } from '../db/schema_users';
+import { personas } from '../db/schema_personas';
+import { like, or, eq, isNull,and, getTableColumns } from 'drizzle-orm';
+import { hashPassword } from '../auth/password';
+import { exigir, exigirCampos, sinCamposDeAdmin } from '../auth/permisos';
+import { UsuarioJwt } from '../auth/usuario.decorator';
+import { CrearUserDto, UpdateUserDto } from './users.dto';
+
+// Columnas públicas: nunca devolver password_hash
+const { password_hash: _omit, ...userPublico } = getTableColumns(users);
+
+async function hashearPassword<T extends { password_hash?: string }>(data: T) {
+  if (data.password_hash) {
+    return { ...data, password_hash: await hashPassword(data.password_hash) };
+  }
+  return data;
+}
+
+function exigirMismoUserOAdmin(id: number, usuario: UsuarioJwt) {
+  exigir(usuario.is_admin || usuario.sub === id);
+}
 
 export interface User {
   id: number;
@@ -20,12 +38,14 @@ export interface User {
 export class UsersService {
   // LISTAR USERS
   async obtenerUsers() {
-    return await db.select().from(users);
+    return await db.select(userPublico).from(users);
   }
 
   // LISTAR POR ID
-  async obtenerUserPorId(id: number) {
-    const user = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  async obtenerUserPorId(id: number, usuario: UsuarioJwt) {
+    exigirMismoUserOAdmin(id, usuario);
+
+    const user = await db.select(userPublico).from(users).where(eq(users.id, id)).limit(1);
 
     if (!user.length) {
       throw new NotFoundException('Usuario no encontrado');
@@ -56,7 +76,7 @@ export class UsersService {
     }
 
     return await db
-      .select()
+      .select(userPublico)
       .from(users)
       .where(or(like(users.email, `%${q}%`)))
       .limit(limit)
@@ -64,16 +84,24 @@ export class UsersService {
   }
 
   // CREAR USER
-  async crearUser(data: NuevoUser) {
-    await db.insert(users).values(data);
+  async crearUser(data: CrearUserDto) {
+    await db.insert(users).values(await hashearPassword(data));
     return { message: 'Usuario creado correctamente' };
   }
 
   // EDITAR USER
-  async actualizarUser(id: number, data: UpdateUser) {
+  async actualizarUser(id: number, data: UpdateUserDto, usuario: UsuarioJwt) {
+    exigirMismoUserOAdmin(id, usuario);
+
+    const permitido = sinCamposDeAdmin(usuario, data, [
+      'is_admin',
+      'estado',
+      'stripe_customer_id',
+    ]);
+
     const result = await db
       .update(users)
-      .set(data)
+      .set(exigirCampos(await hashearPassword(permitido)))
       .where(eq(users.id, id))
       .execute();
 
@@ -103,7 +131,9 @@ export class UsersService {
   // }
 
   // ELIMINAR USER (delete físico por ahora)
-  async eliminarUser(id: number) {
+  async eliminarUser(id: number, usuario: UsuarioJwt) {
+    exigirMismoUserOAdmin(id, usuario);
+
     const result = await db.delete(users).where(eq(users.id, id)).execute();
 
     if (result[0].affectedRows === 0) {

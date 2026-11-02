@@ -1,12 +1,22 @@
 // src/casas/casas.service.ts
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { db } from '../db/connection';
-import { casas, NuevaCasa, UpdateCasa } from '../db/schema_casas';
+import { casas } from '../db/schema_casas';
 import { eq, sql } from 'drizzle-orm';
 import { PineconeService } from '../pinecone/pinecone.service';
+import {
+  exigir,
+  exigirCampos,
+  exigirDuenoDeCasa,
+  hostIdDe,
+  sinCamposDeAdmin,
+} from '../auth/permisos';
+import { UsuarioJwt } from '../auth/usuario.decorator';
+import { CrearCasaDto, UpdateCasaDto } from './casas.dto';
 
 @Injectable()
 export class CasasService {
@@ -45,8 +55,16 @@ export class CasasService {
   }
 
   // ─── Crear ────────────────────────────────────────────────────────────────
-  async crearCasa(data: NuevaCasa) {
-    const result = await db.insert(casas).values(data);
+  async crearCasa(data: CrearCasaDto, usuario: UsuarioJwt) {
+    const host_id = usuario.is_admin ? data.host_id : await hostIdDe(usuario);
+    if (!usuario.is_admin) {
+      exigir(!!host_id, 'Debes ser anfitrión para publicar una casa');
+    }
+    if (!host_id) {
+      throw new BadRequestException('host_id es obligatorio');
+    }
+
+    const result = await db.insert(casas).values({ ...data, host_id });
     const nuevaId = result[0].insertId;
 
     // Sincronizar con Pinecone
@@ -59,8 +77,11 @@ export class CasasService {
   }
 
   // ─── Actualizar ───────────────────────────────────────────────────────────
-  async actualizarCasa(id: number, data: UpdateCasa) {
-    const result = await db.update(casas).set(data).where(eq(casas.id, id)).execute();
+  async actualizarCasa(id: number, data: UpdateCasaDto, usuario: UsuarioJwt) {
+    await exigirDuenoDeCasa(id, usuario);
+
+    const permitido = sinCamposDeAdmin(usuario, data, ['host_id']);
+    const result = await db.update(casas).set(exigirCampos(permitido)).where(eq(casas.id, id)).execute();
     if (result[0].affectedRows === 0) throw new NotFoundException('Casa no encontrada');
 
     // Sincronizar con Pinecone
@@ -73,7 +94,9 @@ export class CasasService {
   }
 
   // ─── Eliminar ─────────────────────────────────────────────────────────────
-  async eliminarCasa(id: number) {
+  async eliminarCasa(id: number, usuario: UsuarioJwt) {
+    await exigirDuenoDeCasa(id, usuario);
+
     const result = await db.delete(casas).where(eq(casas.id, id)).execute();
     if (result[0].affectedRows === 0) throw new NotFoundException('Casa no encontrada');
 

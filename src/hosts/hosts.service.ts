@@ -1,7 +1,33 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { db } from '../db/connection';
-import { hosts, NuevoHost, UpdateHost } from '../db/schema_hosts';
+import { hosts } from '../db/schema_hosts';
 import { like, or, eq, and } from 'drizzle-orm';
+import {
+  exigir,
+  exigirCampos,
+  hostIdDe,
+  sinCamposDeAdmin,
+} from '../auth/permisos';
+import { UsuarioJwt } from '../auth/usuario.decorator';
+import { CrearHostDto, UpdateHostDto } from './hosts.dto';
+
+// Estos campos los maneja la plataforma (verificación, reputación, Stripe)
+const CAMPOS_ADMIN: (keyof UpdateHostDto)[] = [
+  'persona_id',
+  'verificado',
+  'rating',
+  'estado',
+  'stripe_account_id',
+  'stripe_onboarding_completed',
+];
+
+async function exigirMismoHostOAdmin(id: number, usuario: UsuarioJwt) {
+  exigir(usuario.is_admin || (await hostIdDe(usuario)) === id);
+}
 
 @Injectable()
 export class HostsService {
@@ -11,7 +37,8 @@ export class HostsService {
   }
 
   // LISTAR POR ID
-  async obtenerHostPorId(id: number) {
+  // Otros usuarios no ven los datos de Stripe
+  async obtenerHostPorId(id: number, usuario: UsuarioJwt) {
     const host = await db
       .select()
       .from(hosts)
@@ -22,7 +49,13 @@ export class HostsService {
       throw new NotFoundException('Host no encontrado');
     }
 
-    return host[0];
+    if (usuario.is_admin || (await hostIdDe(usuario)) === id) {
+      return host[0];
+    }
+
+    const { stripe_account_id, stripe_onboarding_completed, ...publico } =
+      host[0];
+    return publico;
   }
 
   // BUSCAR HOSTS
@@ -60,16 +93,26 @@ export class HostsService {
     // }
 
 // CREAR HOST
-async crearHost(data: NuevoHost) {
-  const result = await db.insert(hosts).values(data);
+async crearHost(data: CrearHostDto, usuario: UsuarioJwt) {
+  const persona_id = usuario.is_admin ? data.persona_id : usuario.persona_id;
+  if (!persona_id) {
+    throw new BadRequestException('persona_id es obligatorio');
+  }
+
+  const permitido = sinCamposDeAdmin(usuario, data, CAMPOS_ADMIN);
+  const result = await db.insert(hosts).values({ ...permitido, persona_id });
   return { message: 'Host creado correctamente', host_id: result[0].insertId };
 }
 
   // EDITAR HOST
-  async actualizarHost(id: number, data: UpdateHost) {
+  async actualizarHost(id: number, data: UpdateHostDto, usuario: UsuarioJwt) {
+    await exigirMismoHostOAdmin(id, usuario);
+
+    const permitido = sinCamposDeAdmin(usuario, data, CAMPOS_ADMIN);
+
     const result = await db
       .update(hosts)
-      .set(data)
+      .set(exigirCampos(permitido))
       .where(eq(hosts.id, id))
       .execute();
 
@@ -99,7 +142,9 @@ async crearHost(data: NuevoHost) {
   //   }
 
   // ELIMINAR HOST (delete físico por ahora)
-  async eliminarHost(id: number) {
+  async eliminarHost(id: number, usuario: UsuarioJwt) {
+    await exigirMismoHostOAdmin(id, usuario);
+
     const result = await db.delete(hosts).where(eq(hosts.id, id)).execute();
 
     if (result[0].affectedRows === 0) {

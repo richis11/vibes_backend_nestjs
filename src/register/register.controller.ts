@@ -1,6 +1,6 @@
 // src/register/register.controller.ts
 import { Controller, Post, Body } from '@nestjs/common';
-import type { RegisterDto } from './register.service';
+import { RegisterDto } from './register.dto';
 import { RegisterService } from './register.service';
 import { Public } from '../auth/public.decorator';
 

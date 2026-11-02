@@ -13,6 +13,9 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CasaImagenesService } from './casa_imagenes.service';
 import { memoryStorage } from 'multer';
+import { Public } from '../auth/public.decorator';
+import { UsuarioActual } from '../auth/usuario.decorator';
+import type { UsuarioJwt } from '../auth/usuario.decorator';
 
 @Controller('casa-imagenes')
 export class CasaImagenesController {
@@ -35,13 +38,20 @@ export class CasaImagenesController {
   subirImagen(
     @Param('casaId', ParseIntPipe) casaId: number,
     @UploadedFile() file: Express.Multer.File,
+    @UsuarioActual() usuario: UsuarioJwt,
     @Query('principal') principal?: string,
   ) {
     const esPrincipal = principal === 'true';
-    return this.casaImagenesService.subirImagen(casaId, file, esPrincipal);
+    return this.casaImagenesService.subirImagen(
+      casaId,
+      file,
+      usuario,
+      esPrincipal,
+    );
   }
 
   // GET /casa-imagenes/:casaId
+  @Public()
   @Get(':casaId')
   obtenerImagenes(@Param('casaId', ParseIntPipe) casaId: number) {
     return this.casaImagenesService.obtenerImagenesPorCasa(casaId);
@@ -52,13 +62,17 @@ export class CasaImagenesController {
   marcarPrincipal(
     @Param('casaId', ParseIntPipe) casaId: number,
     @Param('imagenId', ParseIntPipe) imagenId: number,
+    @UsuarioActual() usuario: UsuarioJwt,
   ) {
-    return this.casaImagenesService.marcarPrincipal(casaId, imagenId);
+    return this.casaImagenesService.marcarPrincipal(casaId, imagenId, usuario);
   }
 
   // DELETE /casa-imagenes/:imagenId
   @Delete(':imagenId')
-  eliminarImagen(@Param('imagenId', ParseIntPipe) imagenId: number) {
-    return this.casaImagenesService.eliminarImagen(imagenId);
+  eliminarImagen(
+    @Param('imagenId', ParseIntPipe) imagenId: number,
+    @UsuarioActual() usuario: UsuarioJwt,
+  ) {
+    return this.casaImagenesService.eliminarImagen(imagenId, usuario);
   }
 }

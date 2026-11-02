@@ -5,12 +5,13 @@ import { users } from '../db/schema_users';
 import { personas } from '../db/schema_personas';
 import { eq } from 'drizzle-orm';
 import { hosts } from '../db/schema_hosts';
-// import * as bcrypt from 'bcrypt';
+import {
+  esHashBcrypt,
+  hashPassword,
+  verificarPassword,
+} from '../auth/password';
 
-export interface LoginDto {
-  email: string;
-  password: string;
-}
+import { LoginDto } from './login.dto';
 
 @Injectable()
 export class LoginService {
@@ -36,10 +37,20 @@ export class LoginService {
     }
 
     // 3. Verificar password
-    // const passwordValid = await bcrypt.compare(data.password, user.password_hash);
-    const passwordValid = data.password === user.password_hash; // reemplazar con bcrypt
+    const passwordValid = await verificarPassword(
+      data.password,
+      user.password_hash,
+    );
     if (!passwordValid) {
       throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    // Migrar passwords antiguos en texto plano a bcrypt
+    if (!esHashBcrypt(user.password_hash)) {
+      await db
+        .update(users)
+        .set({ password_hash: await hashPassword(data.password) })
+        .where(eq(users.id, user.id));
     }
 
     // 4. Buscar persona asociada

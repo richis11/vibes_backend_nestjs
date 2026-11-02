@@ -1,9 +1,149 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { db } from '../db/connection';
-import { reservas, NuevaReserva, UpdateReserva } from '../db/schema_reservas';
-import { eq, or, like, desc, asc, and, notInArray, sql, ne } from 'drizzle-orm';
+import { reservas } from '../db/schema_reservas';
+import {
+  eq,
+  or,
+  like,
+  desc,
+  asc,
+  and,
+  inArray,
+  notInArray,
+  lt,
+  gt,
+  ne,
+} from 'drizzle-orm';
+import { calcularNoches, calcularPrecioReserva } from './precio';
 import { casas } from '../db/schema_casas';
+import {
+  exigir,
+  exigirCampos,
+  hostDeCasa,
+  hostIdDe,
+  sinCamposDeAdmin,
+} from '../auth/permisos';
+import { UsuarioJwt } from '../auth/usuario.decorator';
+import { CrearReservaDto, UpdateReservaDto } from './reservas.dto';
 
+// Campos que solo la plataforma (admin / Stripe) puede tocar
+const CAMPOS_ADMIN: (keyof UpdateReservaDto)[] = [
+  'casa_id',
+  'guest_id',
+  'stripe_payment_intent_id',
+  'stripe_transfer_id',
+];
+
+type Rol = 'admin' | 'guest' | 'host';
+
+// Estados a los que cada rol puede mover una reserva (pagos los marca Stripe/admin)
+const ESTADOS_POR_ROL: Record<Rol, string[] | null> = {
+  admin: null, // sin restricción
+  guest: ['cancelada'],
+  host: ['confirmada', 'cancelada', 'completada'],
+};
+
+// El huésped, el anfitrión de la casa o un admin
+async function exigirParticipante(
+  reserva: { guest_id: number; casa_id: number },
+  usuario: UsuarioJwt,
+): Promise<Rol> {
+  if (usuario.is_admin) return 'admin';
+  if (reserva.guest_id === usuario.persona_id) return 'guest';
+  const hostId = await hostDeCasa(reserva.casa_id);
+  exigir(hostId === (await hostIdDe(usuario)), 'Esta reserva no es tuya');
+  return 'host';
+}
+
+// Estados que ocupan las fechas de la casa
+const ESTADOS_ACTIVOS = ['pendiente_pago', 'pagada', 'confirmada'] as const;
+const esActiva = (estado: string) =>
+  (ESTADOS_ACTIVOS as readonly string[]).includes(estado);
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+// Bloquea la casa (FOR UPDATE) para que dos reservas simultáneas no se
+// pisen, verifica que las fechas estén libres y calcula el precio.
+async function cotizarFechasLibres(
+  tx: Tx,
+  casaId: number,
+  fecha_inicio: string,
+  fecha_fin: string,
+  excluirReservaId?: number,
+) {
+  const casa = await tx
+    .select({ precio: casas.precio, estado: casas.estado })
+    .from(casas)
+    .where(eq(casas.id, casaId))
+    .limit(1)
+    .for('update');
+
+  if (!casa.length) throw new NotFoundException('Casa no encontrada');
+  if (casa[0].estado !== 'activa') {
+    throw new BadRequestException('La casa no está disponible para reservar');
+  }
+
+  // Calcula primero: valida que las fechas existan y que fin > inicio
+  const precio = calcularPrecioReserva(casa[0].precio, fecha_inicio, fecha_fin);
+
+  const choque = await tx
+    .select({ id: reservas.id })
+    .from(reservas)
+    .where(
+      and(
+        eq(reservas.casa_id, casaId),
+        inArray(reservas.estado, [...ESTADOS_ACTIVOS]),
+        lt(reservas.fecha_inicio, fecha_fin),
+        gt(reservas.fecha_fin, fecha_inicio),
+        excluirReservaId ? ne(reservas.id, excluirReservaId) : undefined,
+      ),
+    )
+    .limit(1);
+
+  if (choque.length) {
+    throw new ConflictException('La casa ya está reservada en esas fechas');
+  }
+
+  return precio;
+}
+
+// Hoy en formato YYYY-MM-DD (con un día de margen por zonas horarias)
+function ayer(): string {
+  return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+// export interface Reserva {
+//   id: number;
+//   casa_id: number;
+//   guest_id: number;
+//   fecha_inicio: string;
+//   fecha_fin: string;
+//   noches: number;
+//   precio_por_noche: string;
+//   subtotal: string;
+//   comision_plataforma: string;
+//   total: string;
+//   moneda: string;
+//   estado:
+//     | 'pendiente_pago'
+//     | 'pagada'
+//     | 'confirmada'
+//     | 'cancelada'
+//     | 'completada'
+//     | 'reembolsada';
+//   stripe_payment_intent_id?: string;
+//   stripe_transfer_id?: string;
+//   cancelada_por?: 'guest' | 'host' | 'system';
+//   motivo_cancelacion?: string;
+//   created_at?: Date;
+//   updated_at?: Date;
+//   deleted_at?: Date;
+// }
 
 @Injectable()
 export class ReservasService {
@@ -13,7 +153,7 @@ export class ReservasService {
   }
 
   // LISTAR POR ID
-  async obtenerReservaPorId(id: number) {
+  async obtenerReservaPorId(id: number, usuario: UsuarioJwt) {
     const reserva = await db
       .select()
       .from(reservas)
@@ -22,72 +162,73 @@ export class ReservasService {
     if (!reserva.length) {
       throw new NotFoundException('Reserva no encontrada');
     }
+    await exigirParticipante(reserva[0], usuario);
     return reserva[0];
   }
   // Buscar reservas por guest_id (persona)
-  async obtenerReservasPorGuest(guestId: number) {
-    const resultado = await db
-      .select({
-        id: reservas.id,
-        casa_id: reservas.casa_id,
-        casa_nombre: casas.nombre,
-        guest_id: reservas.guest_id,
-        fecha_inicio: reservas.fecha_inicio,
-        fecha_fin: reservas.fecha_fin,
-        noches: reservas.noches,
-        precio_por_noche: reservas.precio_por_noche,
-        subtotal: reservas.subtotal,
-        comision_plataforma: reservas.comision_plataforma,
-        total: reservas.total,
-        moneda: reservas.moneda,
-        estado: reservas.estado,
-        created_at: reservas.created_at,
-      })
-      .from(reservas)
-      .innerJoin(casas, eq(reservas.casa_id, casas.id))
-      .where(eq(reservas.guest_id, guestId));
+async obtenerReservasPorGuest(guestId: number, usuario: UsuarioJwt) {
+  exigir(usuario.is_admin || usuario.persona_id === guestId);
 
-    if (!resultado.length) {
-      throw new NotFoundException(
-        'No se encontraron reservas para este usuario',
-      );
-    }
+  const resultado = await db
+    .select({
+      id: reservas.id,
+      casa_id: reservas.casa_id,
+      casa_nombre: casas.nombre,
+      guest_id: reservas.guest_id,
+      fecha_inicio: reservas.fecha_inicio,
+      fecha_fin: reservas.fecha_fin,
+      noches: reservas.noches,
+      precio_por_noche: reservas.precio_por_noche,
+      subtotal: reservas.subtotal,
+      comision_plataforma: reservas.comision_plataforma,
+      total: reservas.total,
+      moneda: reservas.moneda,
+      estado: reservas.estado,
+      created_at: reservas.created_at,
+    })
+    .from(reservas)
+    .innerJoin(casas, eq(reservas.casa_id, casas.id))
+    .where(eq(reservas.guest_id, guestId));
 
-    return resultado;
+  if (!resultado.length) {
+    throw new NotFoundException('No se encontraron reservas para este usuario');
   }
 
-  // Buscar reservas por host_id (a través de casas)
-  async obtenerReservasPorHost(hostId: number) {
-    const resultado = await db
-      .select({
-        id: reservas.id,
-        casa_id: reservas.casa_id,
-        casa_nombre: casas.nombre,
-        guest_id: reservas.guest_id,
-        fecha_inicio: reservas.fecha_inicio,
-        fecha_fin: reservas.fecha_fin,
-        noches: reservas.noches,
-        precio_por_noche: reservas.precio_por_noche,
-        subtotal: reservas.subtotal,
-        comision_plataforma: reservas.comision_plataforma,
-        total: reservas.total,
-        moneda: reservas.moneda,
-        estado: reservas.estado,
-        created_at: reservas.created_at,
-      })
-      .from(reservas)
-      .innerJoin(casas, eq(reservas.casa_id, casas.id))
-      .where(eq(casas.host_id, hostId))
-      .orderBy(reservas.id);
+  return resultado;
+}
 
-    if (!resultado.length) {
-      throw new NotFoundException(
-        'No se encontraron reservas para este anfitrión',
-      );
-    }
+// Buscar reservas por host_id (a través de casas)
+async obtenerReservasPorHost(hostId: number, usuario: UsuarioJwt) {
+  exigir(usuario.is_admin || (await hostIdDe(usuario)) === hostId);
 
-    return resultado;
+  const resultado = await db
+    .select({
+      id: reservas.id,
+      casa_id: reservas.casa_id,
+      casa_nombre: casas.nombre,
+      guest_id: reservas.guest_id,
+      fecha_inicio: reservas.fecha_inicio,
+      fecha_fin: reservas.fecha_fin,
+      noches: reservas.noches,
+      precio_por_noche: reservas.precio_por_noche,
+      subtotal: reservas.subtotal,
+      comision_plataforma: reservas.comision_plataforma,
+      total: reservas.total,
+      moneda: reservas.moneda,
+      estado: reservas.estado,
+      created_at: reservas.created_at,
+    })
+    .from(reservas)
+  .innerJoin(casas, eq(reservas.casa_id, casas.id))
+  .where(eq(casas.host_id, hostId))
+  .orderBy((reservas.id));
+
+  if (!resultado.length) {
+    throw new NotFoundException('No se encontraron reservas para este anfitrión');
   }
+
+  return resultado;
+}
 
   // BUSCAR RESERVAS (por guest_id, estado o casa_id opcional)
   async buscarReservas(q: string, page = 1) {
@@ -110,30 +251,95 @@ export class ReservasService {
   }
 
   // CREAR RESERVA
-  async crearReserva(data: NuevaReserva) {
-  const hayConflicto = await this.verificarSolapamiento(
-    data.casa_id,
-    data.fecha_inicio,
-    data.fecha_fin,
-  );
+  async crearReserva(data: CrearReservaDto, usuario: UsuarioJwt) {
+    const guest_id = usuario.is_admin ? data.guest_id : usuario.persona_id;
+    if (!guest_id) {
+      throw new BadRequestException('guest_id es obligatorio');
+    }
 
-  if (hayConflicto) {
-    throw new ConflictException(
-      'Las fechas seleccionadas ya están ocupadas para esta casa',
-    );
+    calcularNoches(data.fecha_inicio, data.fecha_fin); // 400 antes de tocar la DB
+    if (!usuario.is_admin && data.fecha_inicio < ayer()) {
+      throw new BadRequestException('No se puede reservar en fechas pasadas');
+    }
+
+    // Una reserva nueva siempre empieza pendiente de pago
+    const permitido = sinCamposDeAdmin(usuario, data, [
+      ...CAMPOS_ADMIN,
+      'estado',
+      'cancelada_por',
+      'motivo_cancelacion',
+    ]);
+
+    const precio = await db.transaction(async (tx) => {
+      const precio = await cotizarFechasLibres(
+        tx,
+        data.casa_id,
+        data.fecha_inicio,
+        data.fecha_fin,
+      );
+
+      await tx
+        .insert(reservas)
+        .values({ ...permitido, ...precio, casa_id: data.casa_id, guest_id });
+
+      return precio;
+    });
+
+    return { message: 'Reserva creada correctamente', ...precio };
   }
 
-  await db.insert(reservas).values(data);
-  return { message: 'Reserva creada correctamente' };
-}
-
   // ACTUALIZAR RESERVA
-  async actualizarReserva(id: number, data: UpdateReserva) {
-    const result = await db
-      .update(reservas)
-      .set(data)
-      .where(eq(reservas.id, id))
-      .execute();
+  async actualizarReserva(
+    id: number,
+    data: UpdateReservaDto,
+    usuario: UsuarioJwt,
+  ) {
+    const actual = await this.obtenerReservaPorId(id, usuario);
+    const rol = await exigirParticipante(actual, usuario);
+
+    const estadosPermitidos = ESTADOS_POR_ROL[rol];
+    if (data.estado && estadosPermitidos) {
+      exigir(
+        estadosPermitidos.includes(data.estado),
+        `No puedes cambiar la reserva a "${data.estado}"`,
+      );
+    }
+
+    const permitido = sinCamposDeAdmin(usuario, data, CAMPOS_ADMIN);
+
+    const fecha_inicio = permitido.fecha_inicio ?? actual.fecha_inicio;
+    const fecha_fin = permitido.fecha_fin ?? actual.fecha_fin;
+    const casa_id = permitido.casa_id ?? actual.casa_id;
+    const estado = permitido.estado ?? actual.estado;
+
+    const cambianFechas =
+      fecha_inicio !== actual.fecha_inicio ||
+      fecha_fin !== actual.fecha_fin ||
+      casa_id !== actual.casa_id;
+
+    // Una vez pagada, cambiar fechas cambiaría el monto cobrado
+    if (cambianFechas && rol !== 'admin') {
+      exigir(
+        actual.estado === 'pendiente_pago',
+        'Solo se pueden cambiar las fechas antes de pagar',
+      );
+    }
+
+    // Reactivar una reserva cancelada también vuelve a ocupar fechas
+    const ocupaFechasNuevas =
+      esActiva(estado) && (cambianFechas || !esActiva(actual.estado));
+
+    const result = await db.transaction(async (tx) => {
+      const precio = ocupaFechasNuevas
+        ? await cotizarFechasLibres(tx, casa_id, fecha_inicio, fecha_fin, id)
+        : {};
+
+      return tx
+        .update(reservas)
+        .set(exigirCampos({ ...permitido, ...(cambianFechas ? precio : {}) }))
+        .where(eq(reservas.id, id))
+        .execute();
+    });
 
     if (result[0].affectedRows === 0) {
       throw new NotFoundException('Reserva no encontrada');
@@ -143,26 +349,25 @@ export class ReservasService {
   }
 
   // SOFT DELETE
-  //   async eliminarReserva(id: number) {
-  //     const result = await db
-  //       .update(reservas)
-  //       .set({ estado: 'cancelada', deleted_at: new Date() })
-  //       .where(eq(reservas.id, id))
-  //       .execute();
+//   async eliminarReserva(id: number) {
+//     const result = await db
+//       .update(reservas)
+//       .set({ estado: 'cancelada', deleted_at: new Date() })
+//       .where(eq(reservas.id, id))
+//       .execute();
 
-  //     if (result[0].affectedRows === 0) {
-  //       throw new NotFoundException('Reserva no encontrada');
-  //     }
+//     if (result[0].affectedRows === 0) {
+//       throw new NotFoundException('Reserva no encontrada');
+//     }
 
-  //     return { message: 'Reserva cancelada correctamente' };
-  //   }
+//     return { message: 'Reserva cancelada correctamente' };
+//   }
 
   // ELIMINAR USER (delete físico por ahora)
-  async eliminarReserva(id: number) {
-    const result = await db
-      .delete(reservas)
-      .where(eq(reservas.id, id))
-      .execute();
+  async eliminarReserva(id: number, usuario: UsuarioJwt) {
+    await this.obtenerReservaPorId(id, usuario);
+
+    const result = await db.delete(reservas).where(eq(reservas.id, id)).execute();
 
     if (result[0].affectedRows === 0) {
       throw new NotFoundException('Reserva no encontrada');
@@ -171,7 +376,7 @@ export class ReservasService {
     return { message: 'Reserva eliminada correctamente' };
   }
 
-  // ─── Obtener fechas ocupadas de una casa ──────────────────────────────────
+  // ─── Obtener fechas ocupadas de una casa (público, para el calendario) ─────
   async obtenerFechasOcupadas(casaId: number) {
     const reservasActivas = await db
       .select({
@@ -187,33 +392,5 @@ export class ReservasService {
       );
 
     return reservasActivas;
-  }
-
-  // ─── Verificar solapamiento de fechas ────────────────────────────────────
-  private async verificarSolapamiento(
-    casaId: number,
-    fechaInicio: string,
-    fechaFin: string,
-    excludeReservaId?: number,
-  ): Promise<boolean> {
-    const condiciones = [
-      eq(reservas.casa_id, casaId),
-      notInArray(reservas.estado, ['cancelada', 'reembolsada']),
-      // Solapamiento: nueva_inicio < existente_fin AND nueva_fin > existente_inicio
-      sql`${reservas.fecha_inicio} < ${fechaFin}`,
-      sql`${reservas.fecha_fin} > ${fechaInicio}`,
-    ];
-
-    if (excludeReservaId) {
-      condiciones.push(ne(reservas.id, excludeReservaId));
-    }
-
-    const conflictos = await db
-      .select({ id: reservas.id })
-      .from(reservas)
-      .where(and(...condiciones))
-      .limit(1);
-
-    return conflictos.length > 0;
   }
 }
